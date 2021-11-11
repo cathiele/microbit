@@ -22,11 +22,11 @@ use microbit::{
 fn heart_image(inner_brightness: u8) -> GreyscaleImage {
     let b = inner_brightness;
     GreyscaleImage::new(&[
-        [0, 7, 0, 7, 0],
-        [7, b, 7, b, 7],
-        [7, b, b, b, 7],
-        [0, 7, b, 7, 0],
-        [0, 0, 7, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, b, 0, 0],
+        [0, 0, 0, 0, 0],
     ])
 }
 
