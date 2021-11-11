@@ -11,10 +11,11 @@ use defmt_rtt as _;
 use panic_halt as _;
 
 use microbit::{
-    board::Board,
     display::nonblocking::{Display, GreyscaleImage},
+    gpio::DisplayPins,
     hal::{
         clocks::Clocks,
+        gpio::{p0, p1, Level},
         rtc::{Rtc, RtcInterrupt},
     },
     pac,
@@ -33,7 +34,7 @@ fn heart_image(inner_brightness: u8) -> GreyscaleImage {
     ])
 }
 
-#[app(device = microbit::pac, peripherals = false)]
+#[app(device = microbit::pac, peripherals = true)]
 const APP: () = {
     struct Resources {
         display: Display<pac::TIMER1>,
@@ -41,20 +42,34 @@ const APP: () = {
     }
 
     #[init]
-    fn init(_cx: init::Context) -> init::LateResources {
-        let board = Board::take().unwrap();
-
+    fn init(cx: init::Context) -> init::LateResources {
         // Starting the low-frequency clock (needed for RTC to work)
-        Clocks::new(board.CLOCK).start_lfclk();
+        let device = cx.device;
+        Clocks::new(device.CLOCK).start_lfclk();
 
         // RTC at 16Hz (32_768 / (2047 + 1))
         // 16Hz; 62.5ms period
-        let mut rtc0 = Rtc::new(board.RTC0, 2047).unwrap();
+        let mut rtc0 = Rtc::new(device.RTC0, 2047).unwrap();
         rtc0.enable_event(RtcInterrupt::Tick);
         rtc0.enable_interrupt(RtcInterrupt::Tick, None);
         rtc0.enable_counter();
 
-        let display = Display::new(board.TIMER1, board.display_pins);
+        let p0parts = p0::Parts::new(device.P0);
+        let p1parts = p1::Parts::new(device.P1);
+        let display_pins = DisplayPins {
+            col1: p0parts.p0_28.into_push_pull_output(Level::High),
+            col2: p0parts.p0_11.into_push_pull_output(Level::High),
+            col3: p0parts.p0_31.into_push_pull_output(Level::High),
+            col4: p1parts.p1_05.into_push_pull_output(Level::High),
+            col5: p0parts.p0_30.into_push_pull_output(Level::High),
+            row1: p0parts.p0_21.into_push_pull_output(Level::Low),
+            row2: p0parts.p0_22.into_push_pull_output(Level::Low),
+            row3: p0parts.p0_15.into_push_pull_output(Level::Low),
+            row4: p0parts.p0_24.into_push_pull_output(Level::Low),
+            row5: p0parts.p0_19.into_push_pull_output(Level::Low),
+        };
+
+        let display = Display::new(device.TIMER1, display_pins);
 
         init::LateResources {
             anim_timer: rtc0,
